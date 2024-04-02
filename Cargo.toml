@@ -1,0 +1,29 @@
+[package]
+name = "backseat-signed"
+version = "0.1.0"
+description = "Authenticate cryptographic links from a signed derivate to its source input"
+authors = ["kpcyrd <git@rxv.cc>"]
+license = "GPL-3.0-or-later"
+repository = "https://github.com/kpcyrd/backseat-signed"
+categories = ["command-line-utilities"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.81"
+blake2 = "0.10.6"
+bstr = "1.9.1"
+clap = { version = "4.5.4", features = ["derive"] }
+clap_complete = "4.5.1"
+digest = "0.10.7"
+env_logger = "0.11.3"
+hex = "0.4.3"
+log = "0.4.21"
+#reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+ruzstd = "0.6.0"
+sequoia-openpgp = { version = "1.19.0", default-features = false, features = ["crypto-openssl"] }
+sha2 = "0.10.8"
+tar = { version = "0.4.40", default-features = false }
+tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread", "fs"] }
+yash-syntax = "0.7.0"
