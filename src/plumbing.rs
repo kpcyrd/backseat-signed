@@ -1,13 +1,14 @@
-use crate::args::{self, Plumbing};
 use crate::buildinfo;
 use crate::chksums;
 use crate::errors::*;
 use crate::pgp;
 use crate::pkgbuild;
+use clap::{Parser, Subcommand};
 use std::ops::Not;
+use std::path::PathBuf;
 use tokio::fs;
 
-pub async fn run(plumbing: args::Plumbing) -> Result<()> {
+pub async fn run(plumbing: Plumbing) -> Result<()> {
     match plumbing {
         Plumbing::ArchlinuxPkgFromSig(args) => args.run().await,
         Plumbing::ArchlinuxPkgbuildFromPkg(args) => args.run().await,
@@ -20,7 +21,30 @@ pub async fn run(plumbing: args::Plumbing) -> Result<()> {
     }
 }
 
-impl args::ArchlinuxPkgFromSig {
+/// Low-level commands for debugging
+#[derive(Debug, Subcommand)]
+pub enum Plumbing {
+    ArchlinuxPkgFromSig(ArchlinuxPkgFromSig),
+    ArchlinuxPkgbuildFromPkg(ArchlinuxPkgbuildFromPkg),
+    ArchlinuxFileFromPkgbuild(ArchlinuxFileFromPkgbuild),
+    // ArchlinuxGitFromPkgbuild(ArchlinuxGitFromPkgbuild),
+    // GitFromTarball(GitFromTarball),
+    PgpVerify(PgpVerify),
+    DebianSourcesFromRelease(DebianSourcesFromRelease),
+    DebianTarballFromSources(DebianTarballFromSources),
+}
+
+/// Authenticate an Arch Linux package by signature and keyring
+#[derive(Debug, Parser)]
+pub struct ArchlinuxPkgFromSig {
+    #[arg(long)]
+    pub keyring: PathBuf,
+    #[arg(long)]
+    pub sig: PathBuf,
+    pub file: PathBuf,
+}
+
+impl ArchlinuxPkgFromSig {
     async fn run(&self) -> Result<()> {
         info!("Loading keyring from {:?}", self.keyring);
         let keyring = fs::read(&self.keyring).await?;
@@ -41,7 +65,15 @@ impl args::ArchlinuxPkgFromSig {
     }
 }
 
-impl args::ArchlinuxPkgbuildFromPkg {
+/// Authenticate a PKGBUILD belongs to an Arch Linux package
+#[derive(Debug, Parser)]
+pub struct ArchlinuxPkgbuildFromPkg {
+    #[arg(long)]
+    pub pkg: PathBuf,
+    pub pkgbuild: PathBuf,
+}
+
+impl ArchlinuxPkgbuildFromPkg {
     async fn run(&self) -> Result<()> {
         info!("Loading PKGBUILD from {:?}", self.pkgbuild);
         let pkgbuild = fs::read(&self.pkgbuild).await?;
@@ -65,7 +97,15 @@ impl args::ArchlinuxPkgbuildFromPkg {
     }
 }
 
-impl args::ArchlinuxFileFromPkgbuild {
+/// Authenticate a file referenced by hash from a PKGBUILD
+#[derive(Debug, Parser)]
+pub struct ArchlinuxFileFromPkgbuild {
+    #[arg(long)]
+    pub pkgbuild: PathBuf,
+    pub file: PathBuf,
+}
+
+impl ArchlinuxFileFromPkgbuild {
     async fn run(&self) -> Result<()> {
         info!("Loading PKGBUILD from {:?}", self.pkgbuild);
         let pkgbuild = fs::read(&self.pkgbuild).await?;
@@ -105,20 +145,38 @@ impl args::ArchlinuxFileFromPkgbuild {
 }
 
 /*
-impl args::ArchlinuxGitFromPkgbuild {
+/// Authenticate a git tree by hash from a PKGBUILD
+#[derive(Debug, Parser)]
+pub struct ArchlinuxGitFromPkgbuild {}
+
+impl ArchlinuxGitFromPkgbuild {
     fn run(&self) -> Result<()> {
         todo!()
     }
 }
 
-impl args::GitFromTarball {
+/// Authenticate a git tree from a source tarball
+#[derive(Debug, Parser)]
+pub struct GitFromTarball {}
+
+impl GitFromTarball {
     fn run(&self) -> Result<()> {
         todo!()
     }
 }
 */
 
-impl args::PgpVerify {
+/// Authenticate a pgp signed message
+#[derive(Debug, Parser)]
+pub struct PgpVerify {
+    #[arg(long)]
+    pub keyring: PathBuf,
+    #[arg(long)]
+    pub sig: PathBuf,
+    pub file: PathBuf,
+}
+
+impl PgpVerify {
     async fn run(&self) -> Result<()> {
         info!("Loading keyring from {:?}", self.keyring);
         let keyring = fs::read(&self.keyring).await?;
@@ -139,13 +197,21 @@ impl args::PgpVerify {
     }
 }
 
-impl args::DebianSourcesFromRelease {
+/// Authenticate a Debian source index from a signed Debian release file
+#[derive(Debug, Parser)]
+pub struct DebianSourcesFromRelease {}
+
+impl DebianSourcesFromRelease {
     fn run(&self) -> Result<()> {
         todo!()
     }
 }
 
-impl args::DebianTarballFromSources {
+/// Authenticate a source tarball from a Debian source index
+#[derive(Debug, Parser)]
+pub struct DebianTarballFromSources {}
+
+impl DebianTarballFromSources {
     fn run(&self) -> Result<()> {
         todo!()
     }
