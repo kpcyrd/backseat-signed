@@ -8,7 +8,7 @@ This concept is somewhat silly but has some interesting properties - software re
 example-0.1.0.tar.gz <- example-0.1.0.tar.gz.sig
 ```
 
-/✨Fabulous✨/. However, the luxury of this simplicity may not always be available, upstream may not be signing their releases, or they are signing some intermediate build artifact instead of the actual source code <sup>\*hint hint\*</sup>.
+*✨Fabulous✨*. However, the luxury of this simplicity may not always be available, upstream may not be signing their releases, or they are signing some intermediate build artifact instead of the actual source code <sup>\*hint hint\*</sup>.
 
 Now what if this is not available? May I present you this alternative chain:
 
@@ -16,15 +16,15 @@ Now what if this is not available? May I present you this alternative chain:
 example-0.1.0.tar.gz <- PKGBUILD <- .BUILDINFO <- .pkg.tar.zst <- .pkg.tar.zst.sig
 ```
 
-Due to a chain of lucky coincident, when an Arch Linux package maintainer signs a package they built from `example-0.1.0.tar.gz`, they sign something that contains a hash (`.pkg.tar.zst/.BUILDINFO`) of something that contains a hash (`PKGBUILD`) of the original `example-0.1.0.tar.gz`.
+Due to a chain of lucky coincidents, when an Arch Linux package maintainer signs a package they built from `example-0.1.0.tar.gz`, they sign something that contains a hash (`.pkg.tar.zst/.BUILDINFO`) of something that contains a hash (`PKGBUILD`) of the original `example-0.1.0.tar.gz`.
 
 Or how about this one?
 
 ```
-example-0.1.0.tar.gz <- example_0.1.0.orig.tar.xz <- Sources.gz <- Release <- Release.gpg
+example-0.1.0.tar.gz <- example_0.1.0.orig.tar.xz <- Sources.xz <- Release <- Release.gpg
 ```
 
-This is technically not a "bit-for-bit" chain, the source tarball is commonly recompressed so only the inner .tar is compared, the outer compression layer is disregarded.
+This requires some squinting since in Debian the source tarball is commonly recompressed so only the inner .tar is compared, the outer compression layer is disregarded.
 
 ## But didn't this just go wrong?
 
@@ -32,28 +32,58 @@ Indeed, you can use `backseat-signed` to verify `xz-5.6.1.tar.gz` (`sha256:2398f
 
 But this is specifically why the xz thing is such a big deal.
 
-Both have used something that wasn't a VCS snapshot and instead used an archive source code pre-processed with autotools (and some manual changes).
+Both have used something that wasn't a VCS snapshot and instead used an archive with source code pre-processed by autotools (and some manual changes), which is arguably an intermediate build artifact.
 
 Since both distributions intend to build from source (with different levels of strictness), they should prefer a VCS snapshot that was taken with e.g. `git archive`.
 
 Ideally you could:
 
 ```
-git -C sourcode/ archive --prefix="example-0.1.0/" -o "example-0.1.0.tar.gz" "v0.1.0"
+git -C source-code/ -c tar.tar.gz.command="gzip -cn" archive --prefix="example-0.1.0/" -o "example-0.1.0.tar.gz" "v0.1.0"
 backseat-signed verify --todo ./debian.todo example-0.1.0.tar.gz
 backseat-signed verify --todo ./archlinux.todo example-0.1.0.tar.gz
 ```
 
-To verify the VCS snapshot (that you're about to review) matches the source code inputs used for both Debian and Arch Linux packages.
+Which hopefully makes it fairly obvious what's the soure code that people should be code reviewing. 🦝
 
-If this doesn't work:
+This could then be topped off with [reproducible builds](https://reproducible-builds.org/) to verify the path from `source -> binary` too (in its entirety).
 
-- Investigate the diff of the distros source inuts (if any)
-- Investigate the diff of the VCS snapshot and the distro source inputs
+## How to use the plumbing commands
 
-You should only code review from version control system if you verified this was indeed the source code used for the binaries you care about.
+For Arch Linux:
 
-This could then be topped off with [reproducible builds](https://reproducible-builds.org/) to verify the path from `source -> binary` too.
+```sh
+# prepare what we want to compare with
+git clone 'https://github.com/abishekvashok/cmatrix'
+git -C cmatrix/ -c tar.tar.gz.command="gzip -cn" archive --prefix="cmatrix-2.0/" -o "cmatrix-2.0.tar.gz" "v2.0"
+
+# for the lack of a better keyring file
+# verify cmatrix-2.0-3-x86_64.pkg.tar.zst.sig -> cmatrix-2.0-3-x86_64.pkg.tar.zst
+wget 'https://archive.archlinux.org/packages/c/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst'{,.sig}
+backseat-signed plumbing archlinux-pkg-from-sig --keyring /usr/share/pacman/keyrings/archlinux.gpg --sig cmatrix-2.0-3-x86_64.pkg.tar.zst.sig cmatrix-2.0-3-x86_64.pkg.tar.zst
+# verify cmatrix-2.0-3-x86_64.pkg.tar.zst -> PKGBUILD
+wget 'https://gitlab.archlinux.org/archlinux/packaging/packages/cmatrix/-/raw/2.0-3/PKGBUILD'
+backseat-signed plumbing archlinux-pkgbuild-from-pkg --pkg cmatrix-2.0-3-x86_64.pkg.tar.zst PKGBUILD
+# verify PKGBUILD -> cmatrix-2.0.tar.gz
+backseat-signed plumbing archlinux-file-from-pkgbuild --pkgbuild PKGBUILD cmatrix-2.0.tar.gz
+```
+
+For Debian:
+
+```sh
+# prepare what we want to compare with
+git clone 'https://github.com/abishekvashok/cmatrix'
+git -C cmatrix/ -c tar.tar.gz.command="gzip -cn" archive --prefix="cmatrix-2.0/" -o "cmatrix-2.0.tar.gz" "v2.0"
+
+# verify Release.gpg -> Release -> Sources.xz
+backseat-signed plumbing debian-sources-from-release --keyring debian-archive-bookworm-automatic.asc --sig Release.gpg --release Release Sources.xz
+# verify Sources.xz -> cmatrix-2.0.tar.gz
+# if debian recompressed your file, you need to provide this file too with `--orig cmatrix_2.0.orig.tar.xz`
+backseat-signed plumbing debian-tarball-from-sources --sources Sources.xz cmatrix-2.0.tar.gz
+```
+
+> [!IMPORTANT]
+> This tool is still experimental and some things are hard-coded that you'd expect to be more flexibel. If something fails please open a github issue. 🖤
 
 ## Why use the past tense '-signed'?
 

@@ -1,6 +1,8 @@
+mod apt;
 mod args;
 mod buildinfo;
 mod chksums;
+mod compression;
 mod errors;
 mod pgp;
 mod pkgbuild;
@@ -28,8 +30,10 @@ async fn main() -> Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or(log_level));
 
     match args.subcommand {
-        SubCommand::Create(_create) => todo!("backseat-signed create"),
-        SubCommand::Verify(_verify) => todo!("backseat-signed verify"),
+        /*
+        SubCommand::Create(_create) => bail!("This feature doesn't exist yet, refer to the README for how to use the plumbing commands"),
+        SubCommand::Verify(_verify) => bail!("This feature doesn't exist yet, refer to the README for how to use the plumbing commands"),
+        */
         SubCommand::Plumbing(plumbing) => plumbing::run(plumbing).await,
         SubCommand::Completions(completions) => completions.generate(io::stdout()),
     }

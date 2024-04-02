@@ -22,39 +22,53 @@ pub fn pubkey(bytes: &[u8]) -> Result<Vec<SigningKey>> {
     Ok(keys)
 }
 
-pub fn signature(bytes: &[u8]) -> Result<Signature> {
+pub fn signature(bytes: &[u8]) -> Result<Vec<Signature>> {
+    let mut sigs = Vec::new();
+
     let mut ppr = PacketParser::from_bytes(&bytes)?;
     while let PacketParserResult::Some(pp) = ppr {
         let (packet, next_ppr) = pp.recurse()?;
         ppr = next_ppr;
         debug!("Found packet in signature block: {packet:?}");
         if let Packet::Signature(sig) = packet {
-            return Ok(sig);
+            sigs.push(sig);
         }
     }
-    bail!("Failed to decode pgp signature")
+
+    if sigs.is_empty() {
+        bail!("Failed to decode any pgp signatures")
+    }
+
+    Ok(sigs)
 }
 
 pub struct SigningKey {
     cert: Cert,
 }
 
-pub fn verify(keyring: &[SigningKey], sig: &Signature, msg: &[u8]) -> Result<Fingerprint> {
-    let body = match sig.typ() {
-        SignatureType::Binary => msg,
-        other => bail!("Signature type is currently not supported: {other:?}"),
-    };
+pub fn verify(keyring: &[SigningKey], sigs: &[Signature], msg: &[u8]) -> Result<Fingerprint> {
+    for sig in sigs {
+        let body = match sig.typ() {
+            SignatureType::Binary => msg,
+            other => bail!("Signature type is currently not supported: {other:?}"),
+        };
 
-    for pubkey in keyring {
-        for key in pubkey.cert.keys() {
-            let key = key.key();
+        for pubkey in keyring {
+            for key in pubkey.cert.keys() {
+                let key = key.key();
 
-            let key_fp = key.fingerprint();
-            debug!("Attempting verification with {:X}", key_fp);
+                let key_fp = key.fingerprint();
+                debug!("Attempting verification with {:X}", key_fp);
 
-            if sig.clone().verify_message(key, body).is_ok() {
-                debug!("Successfully verified signature");
-                return Ok(key_fp);
+                match sig.clone().verify_message(key, body) {
+                    Ok(_) => {
+                        debug!("Successfully verified signature");
+                        return Ok(key_fp);
+                    }
+                    Err(err) => {
+                        debug!("Signature verification failed: {err:#}");
+                    }
+                }
             }
         }
     }

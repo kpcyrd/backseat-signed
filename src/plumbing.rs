@@ -1,8 +1,11 @@
+use crate::apt;
 use crate::buildinfo;
 use crate::chksums;
+use crate::compression;
 use crate::errors::*;
 use crate::pgp;
 use crate::pkgbuild;
+use apt_parser::Release;
 use clap::{Parser, Subcommand};
 use std::ops::Not;
 use std::path::PathBuf;
@@ -16,8 +19,8 @@ pub async fn run(plumbing: Plumbing) -> Result<()> {
         // Plumbing::ArchlinuxGitFromPkgbuild(args) => args.run(),
         // Plumbing::GitFromTarball(args) => args.run(),
         Plumbing::PgpVerify(args) => args.run().await,
-        Plumbing::DebianSourcesFromRelease(args) => args.run(),
-        Plumbing::DebianTarballFromSources(args) => args.run(),
+        Plumbing::DebianSourcesFromRelease(args) => args.run().await,
+        Plumbing::DebianTarballFromSources(args) => args.run().await,
     }
 }
 
@@ -199,20 +202,135 @@ impl PgpVerify {
 
 /// Authenticate a Debian source index from a signed Debian release file
 #[derive(Debug, Parser)]
-pub struct DebianSourcesFromRelease {}
+pub struct DebianSourcesFromRelease {
+    #[arg(long)]
+    pub keyring: PathBuf,
+    #[arg(long)]
+    pub sig: PathBuf,
+    #[arg(long)]
+    pub release: PathBuf,
+    pub sources: PathBuf,
+}
 
 impl DebianSourcesFromRelease {
-    fn run(&self) -> Result<()> {
-        todo!()
+    async fn run(&self) -> Result<()> {
+        info!("Loading keyring from {:?}", self.keyring);
+        let keyring = fs::read(&self.keyring).await?;
+        let keyring = pgp::pubkey(&keyring)?;
+        info!("Loaded {} public keys", keyring.len());
+
+        info!("Loading signature from {:?}", self.sig);
+        let sig = fs::read(&self.sig).await?;
+        let sig = pgp::signature(&sig)?;
+
+        info!("Loading release file from {:?}", self.release);
+        let release = fs::read(&self.release).await?;
+
+        info!("Loading sources index from {:?}", self.sources);
+        let sources = fs::read(&self.sources).await?;
+
+        // Verify release file signature
+        pgp::verify(&keyring, &sig, &release)?;
+
+        // Parse release, match with sources
+        let release = String::from_utf8(release)?;
+        let release = Release::from(&release)?;
+
+        let sha256sums = release
+            .sha256sum
+            .context("Release file has no sha256sum section")?;
+        let sources_entry = sha256sums
+            .into_iter()
+            .find(|e| e.filename == "main/source/Sources.xz")
+            .context("Failed to find source entry in release file")?;
+        debug!("Found sha256sum entry for sources index: {sources_entry:?}");
+        let expected = sources_entry.hash;
+
+        debug!("Checking hash...");
+        let sha256 = chksums::sha256(&sources);
+
+        if sha256 == expected {
+            info!("Sources index verified successfully");
+            Ok(())
+        } else {
+            bail!("Sources index sha256={sha256:?} does not match Release sha256sum={expected:?}");
+        }
     }
 }
 
 /// Authenticate a source tarball from a Debian source index
 #[derive(Debug, Parser)]
-pub struct DebianTarballFromSources {}
+pub struct DebianTarballFromSources {
+    #[arg(long)]
+    pub sources: PathBuf,
+    #[arg(long)]
+    pub name: Option<String>,
+    #[arg(long)]
+    pub version: Option<String>,
+    #[arg(long)]
+    pub orig: Option<PathBuf>,
+    pub file: PathBuf,
+}
 
 impl DebianTarballFromSources {
-    fn run(&self) -> Result<()> {
-        todo!()
+    async fn run(&self) -> Result<()> {
+        info!("Loading sources index from {:?}", self.sources);
+        let sources = fs::read(&self.sources).await?;
+        let sources = apt::parse_sources(&sources)?;
+
+        info!("Loading file from {:?}", self.file);
+        let content = fs::read(&self.file).await?;
+
+        let sha256 = if let Some(orig) = &self.orig {
+            debug!("Decompressing file...");
+            let content = compression::decompress(&content)?;
+
+            info!("Loading Debian .orig.tar from {orig:?}");
+            let orig = fs::read(orig).await?;
+            let sha256 = chksums::sha256(&orig);
+            let orig = compression::decompress(&orig)?;
+
+            if orig != content {
+                bail!("Decompressed file does match match decompressed Debian .orig.tar");
+            }
+
+            sha256
+        } else {
+            chksums::sha256(&content)
+        };
+
+        info!("Searching in index...");
+        for pkg in sources {
+            trace!("Found package in sources index: {pkg:?}");
+
+            if let Some(name) = &self.name {
+                if pkg.package != *name {
+                    trace!("Skipping due to package name mismatch");
+                    continue;
+                }
+            }
+
+            if let Some(version) = &self.version {
+                if pkg.version.as_ref() != Some(version) {
+                    trace!("Skipping due to package version mismatch");
+                    continue;
+                }
+            }
+
+            for chksum in pkg.checksums_sha256 {
+                if !chksum.filename.ends_with(".orig.tar.gz")
+                    && !chksum.filename.ends_with(".orig.tar.xz")
+                {
+                    continue;
+                }
+
+                if chksum.hash == sha256 {
+                    info!("File verified successfully");
+                    return Ok(());
+                }
+            }
+        }
+
+        bail!("Could not find source tarball with matching hash")
     }
 }

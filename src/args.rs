@@ -20,13 +20,16 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum SubCommand {
+    /*
     Create(Create),
     Verify(Verify),
+    */
     #[command(subcommand)]
     Plumbing(plumbing::Plumbing),
     Completions(Completions),
 }
 
+/*
 /// Bundle indicators that create a cryptographic link to the source input
 #[derive(Debug, Parser)]
 pub struct Create {}
@@ -34,6 +37,7 @@ pub struct Create {}
 /// Check collected indicators for integrity
 #[derive(Debug, Parser)]
 pub struct Verify {}
+*/
 
 /// Generate shell completions
 #[derive(Debug, Parser)]
