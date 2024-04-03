@@ -83,7 +83,7 @@ backseat-signed plumbing debian-tarball-from-sources --sources Sources.xz cmatri
 ```
 
 > [!IMPORTANT]
-> This tool is still experimental and some things are hard-coded that you'd expect to be more flexibel. If something fails please open a github issue. 🖤
+> This tool is still experimental and some things are hard-coded that you'd expect to be more flexible. If something fails please open a github issue. 🖤
 
 ## Why use the past tense '-signed'?
 
