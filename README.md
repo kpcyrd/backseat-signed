@@ -2,7 +2,7 @@
 
 Authenticate cryptographic links from a signed derivate to its source input.
 
-This concept is somewhat silly but has some interesting properties - software releases are typically signed like this:
+This concept is somewhat goofy but has some interesting properties - software releases are typically signed like this:
 
 ```
 example-0.1.0.tar.gz <- example-0.1.0.tar.gz.sig
@@ -16,7 +16,7 @@ Now what if this is not available? May I present you this alternative chain:
 example-0.1.0.tar.gz <- PKGBUILD <- .BUILDINFO <- .pkg.tar.zst <- .pkg.tar.zst.sig
 ```
 
-Due to a chain of lucky coincidents, when an Arch Linux package maintainer signs a package they built from `example-0.1.0.tar.gz`, they sign something that contains a hash (`.pkg.tar.zst/.BUILDINFO`) of something that contains a hash (`PKGBUILD`) of the original `example-0.1.0.tar.gz`.
+Due to a chain of happy coincidents, when an Arch Linux package maintainer signs a package they built from `example-0.1.0.tar.gz`, they sign something that contains a hash (`.pkg.tar.zst/.BUILDINFO`) of something that contains a hash (`PKGBUILD`) of the original `example-0.1.0.tar.gz`.
 
 Or how about this one?
 
@@ -24,11 +24,11 @@ Or how about this one?
 example-0.1.0.tar.gz <- example_0.1.0.orig.tar.xz <- Sources.xz <- Release <- Release.gpg
 ```
 
-This requires some squinting since in Debian the source tarball is commonly recompressed so only the inner .tar is compared, the outer compression layer is disregarded.
+This may require some squinting since in Debian the source tarball is sometimes recompressed so only the inner .tar is compared, the outer compression layer is disregarded.
 
 ## But didn't this just go wrong?
 
-Indeed, you can use `backseat-signed` to verify `xz-5.6.1.tar.gz` (`sha256:2398f4a8e53345325f44bdd9f0cc7401bd9025d736c6d43b372f4dea77bf75b8`) has been in both Debian and Arch Linux.
+Indeed, you can use `backseat-signed` to verify `xz-5.6.1.tar.gz` <sup><sup>(`sha256:2398f4a8e53345325f44bdd9f0cc7401bd9025d736c6d43b372f4dea77bf75b8`)</sup></sup> has been in both Debian and Arch Linux.
 
 But this is specifically why the xz thing is such a big deal.
 
@@ -84,6 +84,10 @@ backseat-signed plumbing debian-tarball-from-sources --sources Sources.xz cmatri
 
 > [!IMPORTANT]
 > This tool is still experimental and some things are hard-coded that you'd expect to be more flexible. If something fails please open a github issue. 🖤
+
+## Where does the name come from?
+
+The name is derived from 'backseat gaming,' which refers to someone who is not actively playing (but merely watching) who involves themselves in a game someone else is playing.
 
 ## Why use the past tense '-signed'?
 
