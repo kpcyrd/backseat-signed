@@ -331,6 +331,6 @@ impl DebianTarballFromSources {
             }
         }
 
-        bail!("Could not find source tarball with matching hash")
+        bail!("Could not find source tarball with matching hash in source index")
     }
 }
