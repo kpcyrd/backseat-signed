@@ -1,6 +1,6 @@
 # backseat-signed
 
-Authenticate cryptographic links from a signed derivate to its source input.
+Authenticate the cryptographic chain-of-custody of Linux distributions (like Arch Linux and Debian) to their source code inputs. This is done by following cryptographic links from a signed derivate to its source input.
 
 This concept is somewhat goofy but has some interesting properties - software releases are typically signed like this:
 
@@ -30,7 +30,7 @@ This may require some squinting since in Debian the source tarball is sometimes 
 
 Indeed, you can use `backseat-signed` to verify `xz-5.6.1.tar.gz` <sup><sup>(`sha256:2398f4a8e53345325f44bdd9f0cc7401bd9025d736c6d43b372f4dea77bf75b8`)</sup></sup> has been in both Debian and Arch Linux.
 
-But this is specifically why the xz thing is such a big deal.
+But this is specifically why the xz thing was such a big deal.
 
 Both have used something that wasn't a VCS snapshot and instead used an archive with source code pre-processed by autotools (and some manual changes), which is arguably an intermediate build artifact.
 
