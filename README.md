@@ -21,7 +21,7 @@ Due to a chain of happy coincidents, when an Arch Linux package maintainer signs
 Or how about this one?
 
 ```
-example-0.1.0.tar.gz <- example_0.1.0.orig.tar.xz <- Sources.xz <- Release <- Release.gpg
+example-0.1.0.tar <- example_0.1.0.orig.tar.xz <- Sources.xz <- Release <- Release.gpg
 ```
 
 This may require some squinting since in Debian the source tarball is sometimes recompressed so only the inner .tar is compared, the outer compression layer is disregarded.
