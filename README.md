@@ -93,6 +93,10 @@ The name is derived from 'backseat gaming,' which refers to someone who is not a
 
 This tool does not create signatures, it only collects and verifies them.
 
+## How does this program decompress xz/lzma?
+
+It's using the [lzma-rs](https://crates.io/crates/lzma-rs) crate, a pure Rust reimplementation of lzma.
+
 ## Credits
 
 This software was brought to you by humans associating with the European left-autonomous hacking scene of the 2020's, in response to the [xz backdoor incident](https://www.openwall.com/lists/oss-security/2024/03/29/4). It aims to make open source authority transparent enough to allow reasoning about them as common goods.
