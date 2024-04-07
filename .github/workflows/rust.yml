@@ -40,7 +40,7 @@ jobs:
         restore-keys: ${{ runner.os }}-cargo-release-
 
     - name: Build
-      run: cargo build --release --verbose ${{ matrix.os.features }}
+      run: cargo build --release --locked --verbose ${{ matrix.os.features }}
 
     - name: Upload binary
       uses: actions/upload-artifact@v4
