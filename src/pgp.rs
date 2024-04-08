@@ -6,7 +6,7 @@ use sequoia_openpgp::types::SignatureType;
 use sequoia_openpgp::Packet;
 use sequoia_openpgp::{Cert, Fingerprint};
 
-pub fn pubkey(bytes: &[u8]) -> Result<Vec<SigningKey>> {
+pub fn keyring(bytes: &[u8]) -> Result<Vec<SigningKey>> {
     let mut keys = Vec::new();
 
     let ppr = PacketParser::from_bytes(bytes)?;

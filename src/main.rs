@@ -1,15 +1,6 @@
-mod apt;
-mod args;
-mod buildinfo;
-mod chksums;
-mod compression;
-mod errors;
-mod pgp;
-mod pkgbuild;
-mod plumbing;
-
-use crate::args::{Args, SubCommand};
-use crate::errors::*;
+use backseat_signed::args::{Args, SubCommand};
+use backseat_signed::errors::*;
+use backseat_signed::plumbing;
 use clap::Parser;
 use env_logger::Env;
 use std::io;

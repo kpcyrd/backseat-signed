@@ -5,7 +5,6 @@ use crate::compression;
 use crate::errors::*;
 use crate::pgp;
 use crate::pkgbuild;
-use apt_parser::Release;
 use clap::{Parser, Subcommand};
 use std::ops::Not;
 use std::path::PathBuf;
@@ -51,7 +50,7 @@ impl ArchlinuxPkgFromSig {
     async fn run(&self) -> Result<()> {
         info!("Loading keyring from {:?}", self.keyring);
         let keyring = fs::read(&self.keyring).await?;
-        let keyring = pgp::pubkey(&keyring)?;
+        let keyring = pgp::keyring(&keyring)?;
         info!("Loaded {} public keys", keyring.len());
 
         info!("Loading signature from {:?}", self.sig);
@@ -183,7 +182,7 @@ impl PgpVerify {
     async fn run(&self) -> Result<()> {
         info!("Loading keyring from {:?}", self.keyring);
         let keyring = fs::read(&self.keyring).await?;
-        let keyring = pgp::pubkey(&keyring)?;
+        let keyring = pgp::keyring(&keyring)?;
         info!("Loaded {} public keys", keyring.len());
 
         info!("Loading signature from {:?}", self.sig);
@@ -218,7 +217,7 @@ impl DebianSourcesFromRelease {
         let keyring = fs::read(&self.keyring)
             .await
             .with_context(|| anyhow!("Failed to load keyring from {:?}", self.keyring))?;
-        let keyring = pgp::pubkey(&keyring)?;
+        let keyring = pgp::keyring(&keyring)?;
         info!("Loaded {} public keys", keyring.len());
 
         info!("Loading signature from {:?}", self.sig);
@@ -241,27 +240,11 @@ impl DebianSourcesFromRelease {
         pgp::verify(&keyring, &sig, &release)?;
 
         // Parse release, match with sources
-        let release = String::from_utf8(release)?;
-        let release = Release::from(&release)?;
+        let release = apt::Release::parse(&release)?;
 
         debug!("Checking hash...");
         let sha256 = chksums::sha256(&sources);
-
-        let sha256sums = release
-            .sha256sum
-            .context("Release file has no sha256sum section")?;
-        let _sources_entry = sha256sums
-            .into_iter()
-            .filter(|entry| entry.filename.contains("/source/Sources"))
-            .find(|entry| {
-                debug!("Found sha256sum entry for sources index: {entry:?}");
-                entry.hash == sha256
-            })
-            .with_context(|| {
-                anyhow!(
-                    "Failed to find matching source entry in release file with sha256={sha256:?}"
-                )
-            })?;
+        let _sources_entry = release.find_source_entry_by_sha256(&sha256)?;
 
         info!("Sources index verified successfully");
         Ok(())
