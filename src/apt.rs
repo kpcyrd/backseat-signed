@@ -1,3 +1,4 @@
+use crate::compression;
 use crate::errors::*;
 use apt_parser::release::ReleaseHash;
 
@@ -9,8 +10,7 @@ pub struct Source {
 }
 
 pub fn parse_sources(mut bytes: &[u8]) -> Result<Vec<Source>> {
-    let mut buf = Vec::new();
-    lzma_rs::xz_decompress(&mut bytes, &mut buf).context("Failed to decompress sources index")?;
+    let buf = compression::decompress(bytes).context("Failed to decompress sources index")?;
     let sources = String::from_utf8(buf)?;
 
     let mut out = Vec::new();
