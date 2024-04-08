@@ -62,6 +62,8 @@ jobs:
         #  features: -F vendored
     steps:
     - uses: actions/checkout@v4
+      with:
+        lfs: true
 
     - name: Set up cargo cache
       uses: actions/cache@v4
