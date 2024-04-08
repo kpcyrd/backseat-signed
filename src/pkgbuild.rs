@@ -1,4 +1,6 @@
+use crate::chksums;
 use crate::errors::*;
+use std::ops::Not;
 use std::str;
 use yash_syntax::syntax::{self, TextUnit, Value, WordUnit};
 
@@ -10,6 +12,30 @@ pub struct Pkgbuild {
 }
 
 impl Pkgbuild {
+    pub fn has_artifact_by_checksum(&self, content: &[u8]) -> Result<()> {
+        let sha256 = self
+            .sha256sums
+            .is_empty()
+            .not()
+            .then(|| chksums::sha256(content));
+        let sha512 = self
+            .sha512sums
+            .is_empty()
+            .not()
+            .then(|| chksums::sha512(content));
+        let blake2b = self
+            .b2sums
+            .is_empty()
+            .not()
+            .then(|| chksums::blake2b(content));
+
+        if self.has_match_for_checksums(sha256.as_deref(), sha512.as_deref(), blake2b.as_deref()) {
+            Ok(())
+        } else {
+            bail!("PKGBUILD does not seem to have any matching sources, sha256={sha256:?}, sha512={sha512:?}, blake2b={blake2b:?}")
+        }
+    }
+
     pub fn has_match_for_checksums(
         &self,
         sha256: Option<&str>,

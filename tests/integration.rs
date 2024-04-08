@@ -1,7 +1,9 @@
 use backseat_signed::apt;
+use backseat_signed::buildinfo;
 use backseat_signed::chksums;
 use backseat_signed::errors::*;
 use backseat_signed::pgp;
+use backseat_signed::pkgbuild;
 use std::io::Read;
 
 fn lz4_decompress(bytes: &[u8]) -> Result<Vec<u8>> {
@@ -67,4 +69,38 @@ fn test_pgp_verify_vim() {
 
     let release = include_bytes!("data/vim/Release");
     pgp::verify(&keyring, &sig, release).unwrap();
+}
+
+#[test]
+fn test_archlinux_verify_pkg_sig() {
+    let keyring = include_bytes!("data/kpcyrd.asc");
+    let keyring = pgp::keyring(keyring).unwrap();
+
+    let sig = include_bytes!("data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst.sig");
+    let sig = pgp::signature(sig).unwrap();
+
+    let pkg = include_bytes!("data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst");
+    pgp::verify(&keyring, &sig, pkg).unwrap();
+}
+
+#[test]
+fn test_archlinux_pkgbuild_hash() {
+    let pkg = include_bytes!("data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst");
+
+    let buildinfo = buildinfo::from_archlinux_pkg(pkg).unwrap();
+    let pkgbuild_sha256sum = buildinfo.pkgbuild_sha256sum;
+
+    assert_eq!(
+        pkgbuild_sha256sum,
+        "6ed7af29ac762cca746c533046099708f78b0fe07b7bf6bc3a5e86df38c87180"
+    );
+}
+
+#[test]
+fn test_archlinux_pkgbuild_artifact() {
+    let pkgbuild = include_bytes!("data/cmatrix/PKGBUILD");
+    let pkgbuild = pkgbuild::parse(pkgbuild).unwrap();
+
+    let pkg = include_bytes!("data/cmatrix/cmatrix-2.0.tar.gz");
+    pkgbuild.has_artifact_by_checksum(pkg).unwrap();
 }

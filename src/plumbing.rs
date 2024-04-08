@@ -6,7 +6,6 @@ use crate::errors::*;
 use crate::pgp;
 use crate::pkgbuild;
 use clap::{Parser, Subcommand};
-use std::ops::Not;
 use std::path::PathBuf;
 use tokio::fs;
 
@@ -117,32 +116,10 @@ impl ArchlinuxFileFromPkgbuild {
         let content = fs::read(&self.file).await?;
 
         info!("Checking hashes");
-        let sha256 = pkgbuild
-            .sha256sums
-            .is_empty()
-            .not()
-            .then(|| chksums::sha256(&content));
-        let sha512 = pkgbuild
-            .sha512sums
-            .is_empty()
-            .not()
-            .then(|| chksums::sha512(&content));
-        let blake2b = pkgbuild
-            .b2sums
-            .is_empty()
-            .not()
-            .then(|| chksums::blake2b(&content));
+        pkgbuild.has_artifact_by_checksum(&content)?;
 
-        if pkgbuild.has_match_for_checksums(
-            sha256.as_deref(),
-            sha512.as_deref(),
-            blake2b.as_deref(),
-        ) {
-            info!("File verified successfully");
-            Ok(())
-        } else {
-            bail!("PKGBUILD does not seem to have any matching sources, sha256={sha256:?}, sha512={sha512:?}, blake2b={blake2b:?}")
-        }
+        info!("File verified successfully");
+        Ok(())
     }
 }
 
@@ -297,6 +274,6 @@ impl DebianTarballFromSources {
             sources.find_pkg_by_sha256(self.name.as_deref(), self.version.as_deref(), &sha256)?;
 
         info!("File verified successfully");
-        return Ok(());
+        Ok(())
     }
 }
