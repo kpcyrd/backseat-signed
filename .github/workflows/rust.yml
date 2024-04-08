@@ -49,6 +49,51 @@ jobs:
         path: ${{ matrix.os.upload }}
       if: matrix.os.upload
 
+  integration-test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+        - name: archlinux-pkg-from-sig
+          cmd: plumbing archlinux-pkg-from-sig --keyring tests/data/kpcyrd.asc --sig tests/data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst.sig tests/data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst
+
+        - name: archlinux-pkgbuild-from-pkg
+          cmd: plumbing archlinux-pkgbuild-from-pkg --pkg tests/data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst tests/data/cmatrix/PKGBUILD
+
+        - name: archlinux-file-from-pkgbuild
+          cmd: plumbing archlinux-file-from-pkgbuild --pkgbuild tests/data/cmatrix/PKGBUILD tests/data/cmatrix/cmatrix-2.0.tar.gz
+
+        - name: pgp-verify (Debian, vim)
+          cmd: plumbing pgp-verify --keyring tests/data/debian-archive-bookworm-automatic.asc --sig tests/data/vim/Release.gpg tests/data/vim/Release
+
+        - name: pgp-verify (Arch Linux, cmatrix)
+          cmd: plumbing pgp-verify --keyring tests/data/kpcyrd.asc --sig tests/data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst.sig tests/data/cmatrix/cmatrix-2.0-3-x86_64.pkg.tar.zst
+
+        - name: debian-sources-from-release (vim)
+          cmd: plumbing debian-sources-from-release --keyring tests/data/debian-archive-bookworm-automatic.asc --sig tests/data/vim/Release.gpg --release tests/data/vim/Release tests/data/vim/Sources.xz
+
+        - name: debian-tarball-from-sources (vim)
+          cmd: plumbing debian-tarball-from-sources --sources tests/data/vim/Sources.xz --orig tests/data/vim/vim_9.1.0199.orig.tar.xz --name vim tests/data/vim/vim_9.1.0199.orig.tar
+          setup: |
+            unxz -k tests/data/vim/vim_9.1.0199.orig.tar.xz
+
+        - name: debian-tarball-from-sources (cmatrix)
+          cmd: plumbing debian-tarball-from-sources --sources tests/data/vim/Sources.xz tests/data/cmatrix/cmatrix-2.0.tar.gz
+
+    name: "integration: ${{ matrix.test.name }}"
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        lfs: true
+    - uses: actions/download-artifact@v4
+    - name: Setup environment
+      run: ${{ matrix.test.setup }}
+      if: ${{ matrix.test.setup }}
+    - name: 🧪 Run test
+      run: chmod +x bin/backseat-signed && bin/backseat-signed ${{ matrix.test.cmd }}
+
   unit-test:
     runs-on: ${{ matrix.os.name }}
     strategy:
