@@ -215,19 +215,27 @@ pub struct DebianSourcesFromRelease {
 impl DebianSourcesFromRelease {
     async fn run(&self) -> Result<()> {
         info!("Loading keyring from {:?}", self.keyring);
-        let keyring = fs::read(&self.keyring).await?;
+        let keyring = fs::read(&self.keyring)
+            .await
+            .with_context(|| anyhow!("Failed to load keyring from {:?}", self.keyring))?;
         let keyring = pgp::pubkey(&keyring)?;
         info!("Loaded {} public keys", keyring.len());
 
         info!("Loading signature from {:?}", self.sig);
-        let sig = fs::read(&self.sig).await?;
+        let sig = fs::read(&self.sig)
+            .await
+            .with_context(|| anyhow!("Failed to load signatures from {:?}", self.sig))?;
         let sig = pgp::signature(&sig)?;
 
         info!("Loading release file from {:?}", self.release);
-        let release = fs::read(&self.release).await?;
+        let release = fs::read(&self.release)
+            .await
+            .with_context(|| anyhow!("Failed to load release file from {:?}", self.release))?;
 
         info!("Loading sources index from {:?}", self.sources);
-        let sources = fs::read(&self.sources).await?;
+        let sources = fs::read(&self.sources)
+            .await
+            .with_context(|| anyhow!("Failed to load sources index from {:?}", self.sources))?;
 
         // Verify release file signature
         pgp::verify(&keyring, &sig, &release)?;
@@ -236,25 +244,27 @@ impl DebianSourcesFromRelease {
         let release = String::from_utf8(release)?;
         let release = Release::from(&release)?;
 
-        let sha256sums = release
-            .sha256sum
-            .context("Release file has no sha256sum section")?;
-        let sources_entry = sha256sums
-            .into_iter()
-            .find(|e| e.filename == "main/source/Sources.xz")
-            .context("Failed to find source entry in release file")?;
-        debug!("Found sha256sum entry for sources index: {sources_entry:?}");
-        let expected = sources_entry.hash;
-
         debug!("Checking hash...");
         let sha256 = chksums::sha256(&sources);
 
-        if sha256 == expected {
-            info!("Sources index verified successfully");
-            Ok(())
-        } else {
-            bail!("Sources index sha256={sha256:?} does not match Release sha256sum={expected:?}");
-        }
+        let sha256sums = release
+            .sha256sum
+            .context("Release file has no sha256sum section")?;
+        let _sources_entry = sha256sums
+            .into_iter()
+            .filter(|entry| entry.filename.contains("/source/Sources"))
+            .find(|entry| {
+                debug!("Found sha256sum entry for sources index: {entry:?}");
+                entry.hash == sha256
+            })
+            .with_context(|| {
+                anyhow!(
+                    "Failed to find matching source entry in release file with sha256={sha256:?}"
+                )
+            })?;
+
+        info!("Sources index verified successfully");
+        Ok(())
     }
 }
 
