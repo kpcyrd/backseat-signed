@@ -1,0 +1,2 @@
+tests/data/**/*.xz filter=lfs diff=lfs merge=lfs -text
+tests/data/**/*.gz filter=lfs diff=lfs merge=lfs -text
