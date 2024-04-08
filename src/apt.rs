@@ -97,13 +97,13 @@ impl SourcesIndex {
                 }
 
                 if chksum.hash == sha256 {
-                    info!("File verified successfully");
+                    debug!("Found matching entry in sources index");
                     return Ok(pkg);
                 }
             }
         }
 
-        bail!("Could not find source tarball with matching hash in source index")
+        bail!("Could not find source tarball with matching hash in sources index")
     }
 }
 

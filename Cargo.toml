@@ -27,6 +27,7 @@ libflate = "2.0.0"
 log = "0.4.21"
 lzma-rs = "0.3.0"
 openssl = "0.10.64"
+rpm = "0.14.0"
 ruzstd = "0.6.0"
 sequoia-openpgp = { version = "1.19.0", default-features = false, features = ["crypto-openssl"] }
 sha2 = "0.10.8"

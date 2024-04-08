@@ -5,6 +5,7 @@ use crate::compression;
 use crate::errors::*;
 use crate::pgp;
 use crate::pkgbuild;
+use crate::rpm;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 use tokio::fs;
@@ -19,6 +20,7 @@ pub async fn run(plumbing: Plumbing) -> Result<()> {
         Plumbing::PgpVerify(args) => args.run().await,
         Plumbing::DebianSourcesFromRelease(args) => args.run().await,
         Plumbing::DebianTarballFromSources(args) => args.run().await,
+        Plumbing::RpmTarballFromSrcRpm(args) => args.run().await,
     }
 }
 
@@ -33,6 +35,7 @@ pub enum Plumbing {
     PgpVerify(PgpVerify),
     DebianSourcesFromRelease(DebianSourcesFromRelease),
     DebianTarballFromSources(DebianTarballFromSources),
+    RpmTarballFromSrcRpm(RpmTarballFromSrcRpm),
 }
 
 /// Authenticate an Arch Linux package by signature and keyring
@@ -272,6 +275,32 @@ impl DebianTarballFromSources {
         info!("Searching in index...");
         let _source_pkg =
             sources.find_pkg_by_sha256(self.name.as_deref(), self.version.as_deref(), &sha256)?;
+
+        info!("File verified successfully");
+        Ok(())
+    }
+}
+
+/// Authenticate a source tarball from an rpm source package
+#[derive(Debug, Parser)]
+pub struct RpmTarballFromSrcRpm {
+    #[arg(long)]
+    pub pkg: PathBuf,
+    pub file: PathBuf,
+}
+
+impl RpmTarballFromSrcRpm {
+    async fn run(&self) -> Result<()> {
+        info!("Loading package from {:?}", self.pkg);
+        let pkg = fs::read(&self.pkg).await?;
+        let pkg = rpm::Rpm::parse(&pkg)?;
+
+        info!("Loading file from {:?}", self.file);
+        let content = fs::read(&self.file).await?;
+
+        info!("Checking hashes");
+        let sha256 = chksums::sha256(&content);
+        let _path = pkg.has_artifact_by_sha256(&sha256)?;
 
         info!("File verified successfully");
         Ok(())

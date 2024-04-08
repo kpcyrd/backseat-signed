@@ -11,3 +11,4 @@ pub mod errors;
 pub mod pgp;
 pub mod pkgbuild;
 pub mod plumbing;
+pub mod rpm;
