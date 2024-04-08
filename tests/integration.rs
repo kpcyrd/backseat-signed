@@ -4,7 +4,9 @@ use backseat_signed::chksums;
 use backseat_signed::errors::*;
 use backseat_signed::pgp;
 use backseat_signed::pkgbuild;
+use backseat_signed::rpm;
 use std::io::Read;
+use std::path::Path;
 
 fn lz4_decompress(bytes: &[u8]) -> Result<Vec<u8>> {
     let mut lz4 = lz4_flex::frame::FrameDecoder::new(bytes);
@@ -101,6 +103,18 @@ fn test_archlinux_pkgbuild_artifact() {
     let pkgbuild = include_bytes!("data/cmatrix/PKGBUILD");
     let pkgbuild = pkgbuild::parse(pkgbuild).unwrap();
 
-    let pkg = include_bytes!("data/cmatrix/cmatrix-2.0.tar.gz");
-    pkgbuild.has_artifact_by_checksum(pkg).unwrap();
+    let content = include_bytes!("data/cmatrix/cmatrix-2.0.tar.gz");
+    pkgbuild.has_artifact_by_checksum(content).unwrap();
+}
+
+#[test]
+fn test_rpm_tarball_from_src_rpm() {
+    let pkg = include_bytes!("data/cmatrix/cmatrix-2.0-9.fc40.src.rpm");
+    let pkg = rpm::Rpm::parse(pkg).unwrap();
+
+    let content = include_bytes!("data/cmatrix/cmatrix-2.0.tar.gz");
+
+    let sha256 = chksums::sha256(content);
+    let path = pkg.has_artifact_by_sha256(&sha256).unwrap();
+    assert_eq!(path, Path::new("cmatrix-2.0.tar.gz"));
 }
