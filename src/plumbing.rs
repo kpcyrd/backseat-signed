@@ -269,7 +269,7 @@ impl DebianTarballFromSources {
     async fn run(&self) -> Result<()> {
         info!("Loading sources index from {:?}", self.sources);
         let sources = fs::read(&self.sources).await?;
-        let sources = apt::parse_sources(&sources)?;
+        let sources = apt::SourcesIndex::parse(&sources)?;
 
         info!("Loading file from {:?}", self.file);
         let content = fs::read(&self.file).await?;
@@ -293,37 +293,10 @@ impl DebianTarballFromSources {
         };
 
         info!("Searching in index...");
-        for pkg in sources {
-            trace!("Found package in sources index: {pkg:?}");
+        let _source_pkg =
+            sources.find_pkg_by_sha256(self.name.as_deref(), self.version.as_deref(), &sha256)?;
 
-            if let Some(name) = &self.name {
-                if pkg.package != *name {
-                    trace!("Skipping due to package name mismatch");
-                    continue;
-                }
-            }
-
-            if let Some(version) = &self.version {
-                if pkg.version.as_ref() != Some(version) {
-                    trace!("Skipping due to package version mismatch");
-                    continue;
-                }
-            }
-
-            for chksum in pkg.checksums_sha256 {
-                if !chksum.filename.ends_with(".orig.tar.gz")
-                    && !chksum.filename.ends_with(".orig.tar.xz")
-                {
-                    continue;
-                }
-
-                if chksum.hash == sha256 {
-                    info!("File verified successfully");
-                    return Ok(());
-                }
-            }
-        }
-
-        bail!("Could not find source tarball with matching hash in source index")
+        info!("File verified successfully");
+        return Ok(());
     }
 }
