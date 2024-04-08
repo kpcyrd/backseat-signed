@@ -1,6 +1,7 @@
 use crate::compression;
 use crate::errors::*;
 use apt_parser::release::ReleaseHash;
+use std::str;
 
 #[derive(Debug, Default)]
 pub struct Source {
@@ -9,9 +10,9 @@ pub struct Source {
     pub checksums_sha256: Vec<ReleaseHash>,
 }
 
-pub fn parse_sources(mut bytes: &[u8]) -> Result<Vec<Source>> {
+pub fn parse_sources(bytes: &[u8]) -> Result<Vec<Source>> {
     let buf = compression::decompress(bytes).context("Failed to decompress sources index")?;
-    let sources = String::from_utf8(buf)?;
+    let sources = str::from_utf8(&buf)?;
 
     let mut out = Vec::new();
 
@@ -65,4 +66,39 @@ pub fn parse_sources(mut bytes: &[u8]) -> Result<Vec<Source>> {
     }
 
     Ok(out)
+}
+
+pub struct Release {
+    release: apt_parser::Release,
+}
+
+impl Release {
+    pub fn parse(bytes: &[u8]) -> Result<Self> {
+        let release = str::from_utf8(bytes)?;
+        let release = apt_parser::Release::from(release)?;
+        Ok(Release { release })
+    }
+
+    pub fn find_source_entry_by_sha256(&self, sha256: &str) -> Result<&ReleaseHash> {
+        let sha256sums = self
+            .release
+            .sha256sum
+            .as_ref()
+            .context("Release file has no sha256sum section")?;
+
+        let sources_entry = sha256sums
+            .iter()
+            .filter(|entry| entry.filename.contains("/source/Sources"))
+            .find(|entry| {
+                debug!("Found sha256sum entry for sources index: {entry:?}");
+                entry.hash == sha256
+            })
+            .with_context(|| {
+                anyhow!(
+                    "Failed to find matching source entry in release file with sha256={sha256:?}"
+                )
+            })?;
+
+        Ok(sources_entry)
+    }
 }
