@@ -28,7 +28,7 @@ log = "0.4.21"
 lzma-rs = "0.3.0"
 openssl = "0.10.64"
 ruzstd = "0.6.0"
-sequoia-openpgp = { version = "1.19.0", default-features = false, features = ["crypto-openssl"] }
+sequoia-openpgp = { version = "1.21.0", default-features = false, features = ["crypto-openssl"] }
 sha2 = "0.10.8"
 tar = { version = "0.4.40", default-features = false }
 tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread", "fs"] }
