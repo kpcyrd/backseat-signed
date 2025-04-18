@@ -1,0 +1,58 @@
+# Maintainer: Kyle Keen <keenerd@gmail.com>
+# Contributor: Jonathan Steel <jsteel at archlinux.org>
+
+pkgname=cmatrix
+pkgver=2.0
+pkgrel=3
+pkgdesc="A curses-based scrolling 'Matrix'-like screen"
+arch=('x86_64')
+url="https://www.asty.org/cmatrix/"
+license=('GPL3')
+depends=('ncurses')
+# source already ships prebuild fonts - no need to add more deps to satisfy cmake
+makedepends=('cmake')
+optdepends=('kbd: cmatrix-tty custom font'
+            'xterm: cmatrix-tty custom font')
+# "https://www.asty.org/$pkgname/dist/$pkgname-$pkgver.tar.gz"
+source=("cmatrix-$pkgver.tgz::https://github.com/abishekvashok/cmatrix/archive/v$pkgver.tar.gz"
+        "cmatrix-tty")
+sha256sums=('ad93ba39acd383696ab6a9ebbed1259ecf2d3cf9f49d6b97038c66f80749e99a'
+            '94890bec3d04f076ae43c56a7768e67cff2a209e02819e2ce80fd61173b15a30')
+
+prepare() {
+  mkdir build
+}
+
+build() {
+  cd build
+  cmake ../$pkgname-$pkgver \
+    -D CMAKE_BUILD_TYPE=Release \
+    -D CMAKE_INSTALL_PREFIX=/usr \
+    #-D CONSOLE_FONTS_DIRS=/usr/share/kbd/consolefonts \
+    #-D X_FONTS_DIRS=/usr/share/fonts/misc \
+    #-D UNIX=true
+  make
+}
+
+package() {
+  # only the binary has a target to install
+  make -C build DESTDIR="$pkgdir" install
+
+  cd $pkgname-$pkgver
+
+  # install X font
+  install -D -m644 mtx.pcf "$pkgdir"/usr/share/fonts/misc/mtx.pcf
+
+  # install console font
+  install -D -m644 matrix.fnt "$pkgdir"/usr/share/kbd/consolefonts/matrix.fnt
+  install -D -m644 matrix.psf.gz "$pkgdir"/usr/share/kbd/consolefonts/matrix.psf.gz
+
+  # todo: fix the pretty wrapper 
+  #install -Dm755 "$srcdir/cmatrix-tty" "$pkgdir/usr/bin/cmatrix-tty"
+
+  for i in AUTHORS NEWS COPYING README ChangeLog INSTALL; do
+    install -Dm644 $i "$pkgdir/usr/share/doc/$pkgname/$i"
+  done
+
+  install -Dm644 cmatrix.1     "$pkgdir/usr/share/man/man1/cmatrix.1"
+}
