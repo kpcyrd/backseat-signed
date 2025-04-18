@@ -18,14 +18,15 @@ jobs:
       fail-fast: false
       matrix:
         os:
-        - name: ubuntu-22.04
+        - name: ubuntu-24.04
           upload: target/release/backseat-signed
         - name: macos-latest
-        # https://github.com/magicant/yash-rs/pull/357
-        #- name: windows-latest
-        #  features: -F vendored
+        - name: windows-latest
+          features: -F vendored
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up cargo cache
       uses: actions/cache@v4
@@ -82,12 +83,15 @@ jobs:
           cmd: plumbing debian-tarball-from-sources --sources tests/data/vim/Sources.xz tests/data/cmatrix/cmatrix-2.0.tar.gz
 
     name: "integration: ${{ matrix.test.name }}"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
-        lfs: true
+        persist-credentials: false
+        fetch-depth: 0
     - uses: actions/download-artifact@v4
+    - name: Checkout integration test data
+      run: git checkout origin/integration-data -- tests/data
     - name: Setup environment
       run: ${{ matrix.test.setup }}
       if: ${{ matrix.test.setup }}
@@ -100,15 +104,15 @@ jobs:
       fail-fast: false
       matrix:
         os:
-        - name: ubuntu-22.04
+        - name: ubuntu-24.04
         - name: macos-latest
-        # https://github.com/magicant/yash-rs/pull/357
-        #- name: windows-latest
-        #  features: -F vendored
+        - name: windows-latest
+          features: -F vendored
     steps:
     - uses: actions/checkout@v4
       with:
-        lfs: true
+        persist-credentials: false
+        fetch-depth: 0
 
     - name: Set up cargo cache
       uses: actions/cache@v4
@@ -128,8 +132,10 @@ jobs:
       run: cargo test ${{ matrix.os.features }} --verbose
 
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
