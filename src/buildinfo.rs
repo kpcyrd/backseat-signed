@@ -1,5 +1,6 @@
 use crate::errors::*;
 use bstr::ByteSlice;
+use ruzstd::decoding::StreamingDecoder;
 use std::io::Read;
 use std::str;
 
@@ -23,7 +24,7 @@ pub fn parse_archlinux(bytes: &[u8]) -> Result<ArchLinuxBuildinfo> {
 }
 
 pub fn from_archlinux_pkg(bytes: &[u8]) -> Result<ArchLinuxBuildinfo> {
-    let decoder = ruzstd::StreamingDecoder::new(bytes)?;
+    let decoder = StreamingDecoder::new(bytes)?;
     let mut tar = tar::Archive::new(decoder);
 
     for entry in tar.entries()? {
