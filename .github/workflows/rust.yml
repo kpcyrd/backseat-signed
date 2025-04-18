@@ -18,12 +18,11 @@ jobs:
       fail-fast: false
       matrix:
         os:
-        - name: ubuntu-22.04
+        - name: ubuntu-24.04
           upload: target/release/backseat-signed
         - name: macos-latest
-        # https://github.com/magicant/yash-rs/pull/357
-        #- name: windows-latest
-        #  features: -F vendored
+        - name: windows-latest
+          features: -F vendored
     steps:
     - uses: actions/checkout@v4
       with:
@@ -84,7 +83,7 @@ jobs:
           cmd: plumbing debian-tarball-from-sources --sources tests/data/vim/Sources.xz tests/data/cmatrix/cmatrix-2.0.tar.gz
 
     name: "integration: ${{ matrix.test.name }}"
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
@@ -105,11 +104,10 @@ jobs:
       fail-fast: false
       matrix:
         os:
-        - name: ubuntu-22.04
+        - name: ubuntu-24.04
         - name: macos-latest
-        # https://github.com/magicant/yash-rs/pull/357
-        #- name: windows-latest
-        #  features: -F vendored
+        - name: windows-latest
+          features: -F vendored
     steps:
     - uses: actions/checkout@v4
       with:
@@ -134,7 +132,7 @@ jobs:
       run: cargo test ${{ matrix.os.features }} --verbose
 
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v4
       with:
