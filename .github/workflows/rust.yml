@@ -26,6 +26,8 @@ jobs:
         #  features: -F vendored
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
 
     - name: Set up cargo cache
       uses: actions/cache@v4
@@ -86,8 +88,11 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        lfs: true
+        persist-credentials: false
+        fetch-depth: 0
     - uses: actions/download-artifact@v4
+    - name: Checkout integration test data
+      run: git checkout origin/integration-data -- tests/data
     - name: Setup environment
       run: ${{ matrix.test.setup }}
       if: ${{ matrix.test.setup }}
@@ -108,7 +113,8 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        lfs: true
+        persist-credentials: false
+        fetch-depth: 0
 
     - name: Set up cargo cache
       uses: actions/cache@v4
@@ -131,5 +137,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v4
+      with:
+        persist-credentials: false
     - name: Run cargo fmt
       run: cargo fmt --all -- --check
